@@ -1,0 +1,37 @@
+{
+  "name": "gmplayer",
+  "version": "0.0.1",
+  "description": "A CLI music player using Google Play Music as a source",
+  "main": "app.js",
+  "dependencies": {
+    "chalk": "^1.1.0",
+    "cli": "^0.9.0",
+    "playmusic": "^2.0.3",
+    "readline-sync": "^1.2.19"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "node app.js"
+  },
+  "bin": {
+    "gmp": "app.js",
+    "gmplayer": "app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/96AA48/gmplayer.git"
+  },
+  "preferGlobal": true,
+  "keywords": [
+    "cli",
+    "google play",
+    "music",
+    "listening",
+    "radio",
+    "download",
+    "convert",
+    "tunes"
+  ],
+  "author": "Bram van der Veen",
+  "license": "MIT"
+}
