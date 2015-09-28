@@ -24,27 +24,28 @@ cli.main(function (args, options) {
   // }
 });
 
-
-function lookup(query) {
+function lookup (query) {
   cli.spinner('Looking up requested song');
   playmusic.init({email: settings().email, password: settings().password}, function (err) {
-    if (err) console.warn(err);
-    else {
-     playmusic.search(query, 20, function (err, results) {
+    if (err) {
+      console.warn(err);
+      return;
+    }
+
+    playmusic.search(query, 20, function (err, results) {
       if (err) cli.error(err);
       process.stdout.write('\n');
-      for (i = 0; i < results.entries.length; i++) {
-        if (results.entries[i].track) {
-          console.log(chalk.yellow('[') + i + chalk.yellow('] ') + chalk.white(results.entries[i].track.title) + ' - ' + chalk.grey(results.entries[i].track.artist));
+      results.entries.forEach(function (entry, index) {
+        if ('track' in entry) {
+          console.log(chalk.yellow('[') + index + chalk.yellow('] ') + chalk.white(entry.track.title) + ' - ' + chalk.grey(entry.track.artist));
         }
-      }
+      });
 
       var input = readline.questionInt('What song do you want to play? #');
       cli.spinner('', true);
 
       download(results.entries[input].track);
-     });
-    }
+    });
   });
 }
 
