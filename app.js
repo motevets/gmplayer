@@ -7,17 +7,29 @@ var chalk = require('chalk');
 var playmusic = new (require('playmusic'))();
 var mplayer = require('child_process').spawn;
 var os = require('os');
+var m3uWriter = require('m3u').extendedWriter();
+
+var resultTypes = {
+  track: '1',
+  album: '3'
+};
 
 cli.parse({
   song: ['s', 'The song you want to download/play.'],
+  album: ['a', 'The album you want to download/play.'],
   downloadonly: ['d', 'If you only want to download the song instead of playing it'],
   // offline: ['o', 'If you want to listen to already downloaded songs']
 });
 
 cli.main(function (args, options) {
   settings();
+
   if (options.song) {
     lookup(args.join(' '));
+  }
+
+  if (options.album) {
+    lookupAlbum(args.join(' '));
   }
   // else if (options.offline) {
   //   offline();
@@ -49,6 +61,39 @@ function lookup (query) {
   });
 }
 
+function lookupAlbum (query) {
+  cli.spinner('Looking up requested album');
+  playmusic.init({email: settings().email, password: settings().password}, function (err) {
+    if (err) {
+      console.warn(err);
+      return;
+    }
+
+    playmusic.search(query, 20, function (err, results) {;
+      if (err) cli.error(err);
+
+      process.stdout.write('\n');
+
+      function onlyAlbums (entry) {
+        return entry.type === resultTypes.album;
+      }
+
+      var albumResults = results.entries.filter(onlyAlbums);
+
+      albumResults.forEach(function (entry, index) {
+        if ('album' in entry) {
+          console.log(chalk.yellow('[') + index + chalk.yellow('] ') + chalk.white(entry.album.name) + ' - ' + chalk.grey(entry.album.artist));
+        }
+      });
+
+      var input = readline.questionInt('What album do you want to play? #');
+      cli.spinner('', true);
+
+      downloadAlbum(albumResults[input].album);
+    });
+  });
+}
+
 function settings() {
   if (!fs.existsSync(getLocation('settings'))) {
     var settings = {
@@ -66,7 +111,7 @@ function settings() {
   }
 }
 
-function mplayerArgs (filename) {
+function mplayerArgs (filename, isPlaylist) {
   var audioEngines = {
     linux: 'alsa',
     darwin: 'coreaudio'
@@ -74,11 +119,17 @@ function mplayerArgs (filename) {
 
   var audioEngine = audioEngines[os.platform()];
 
+  if (isPlaylist) {
+    return ['-ao', audioEngine, '-playlist', getLocation('music') + filename];
+  }
+
   return ['-ao', audioEngine, getLocation('music') + filename];
 }
 
-function play(file) {
-  var player = mplayer('mplayer', mplayerArgs(file));
+function play(file, playlist) {
+  playlist = !!playlist; // default to false
+
+  var player = mplayer('mplayer', mplayerArgs(file, playlist));
   var isfiltered = false;
 
   console.log('Playing ' + file + '\n');
@@ -97,7 +148,6 @@ function play(file) {
   player.on('error', function (data) {
     cli.fatal('There was an error playing your song, maybe you need to install mplayer?');
   });
-
 }
 
 function download(track) {
@@ -118,7 +168,7 @@ function download(track) {
           });
 
           res.on('end', function () {
-            play(songname);
+            // play(songname);
           });
         });
       }
@@ -126,8 +176,29 @@ function download(track) {
   }
   else {
     console.log('Song already found in offline storage, playing that instead.');
-    play(songname);
+    // play(songname);
   }
+}
+
+function downloadAlbum(album) {
+  playmusic.getAlbum(album.albumId, true, function (err, fullAlbumDetails) {
+    fullAlbumDetails.tracks.forEach(function (track) {
+      var songName = track.title + ' - ' + track.artist + '.mp3';track.title + ' - ' + track.artist + '.mp3';
+      m3uWriter.file(getLocation('music') + songName);
+      download(track);
+    });
+
+    var playlistPath = writePlaylist(m3uWriter, album);
+    play(playlistPath, true);
+  });
+}
+
+function writePlaylist (writer, album) {
+  var playlistPath = getLocation('music') + album.name + '.m3u';
+
+  fs.writeFileSync(playlistPath, writer.toString());
+
+  return album.name + '.m3u';
 }
 
 function getLocation(type) {
