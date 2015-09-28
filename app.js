@@ -8,6 +8,7 @@ var playmusic = new (require('playmusic'))();
 var mplayer = require('child_process').spawn;
 var os = require('os');
 var m3uWriter = require('m3u').extendedWriter();
+var Q = require('q');
 
 var resultTypes = {
   track: '1',
@@ -56,7 +57,7 @@ function lookup (query) {
       var input = readline.questionInt('What song do you want to play? #');
       cli.spinner('', true);
 
-      download(results.entries[input].track);
+      download(results.entries[input].track).then(play);
     });
   });
 }
@@ -151,6 +152,7 @@ function play(file, playlist) {
 }
 
 function download(track) {
+  var deferred = Q.defer();
   var songname = track.title + ' - ' + track.artist + '.mp3';
 
   if (!fs.existsSync(getLocation('music') + songname)) {
@@ -168,7 +170,7 @@ function download(track) {
           });
 
           res.on('end', function () {
-            // play(songname);
+            deferred.resolve(songname);
           });
         });
       }
@@ -176,20 +178,24 @@ function download(track) {
   }
   else {
     console.log('Song already found in offline storage, playing that instead.');
-    // play(songname);
+    deferred.resolve(songname);
   }
+
+  return deferred.promise;
 }
 
 function downloadAlbum(album) {
   playmusic.getAlbum(album.albumId, true, function (err, fullAlbumDetails) {
-    fullAlbumDetails.tracks.forEach(function (track) {
+    var downloadPromises = fullAlbumDetails.tracks.map(function (track) {
       var songName = track.title + ' - ' + track.artist + '.mp3';track.title + ' - ' + track.artist + '.mp3';
       m3uWriter.file(getLocation('music') + songName);
-      download(track);
+      return download(track);
     });
 
-    var playlistPath = writePlaylist(m3uWriter, album);
-    play(playlistPath, true);
+    Q.all(downloadPromises).then(function() {
+      var playlistPath = writePlaylist(m3uWriter, album);
+      play(playlistPath, true);
+    });
   });
 }
 
