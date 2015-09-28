@@ -6,6 +6,7 @@ var readline = require('readline-sync');
 var chalk = require('chalk');
 var playmusic = new (require('playmusic'))();
 var mplayer = require('child_process').spawn;
+var os = require('os');
 
 cli.parse({
   song: ['s', 'The song you want to download/play.'],
@@ -64,8 +65,19 @@ function settings() {
   }
 }
 
+function mplayerArgs (filename) {
+  var audioEngines = {
+    linux: 'alsa',
+    darwin: 'coreaudio'
+  }
+
+  var audioEngine = audioEngines[os.platform()];
+
+  return ['-ao', audioEngine, getLocation('music') + filename];
+}
+
 function play(file) {
-  var player = mplayer('mplayer', ['-ao','alsa', getLocation('music') + file]);
+  var player = mplayer('mplayer', mplayerArgs(file));
   var isfiltered = false;
 
   console.log('Playing ' + file + '\n');
@@ -118,14 +130,12 @@ function download(track) {
 }
 
 function getLocation(type) {
-  var prefix = '/home/';
-
   switch (type) {
     case 'settings':
-      return prefix + process.env['USER'] + '/.gmplayerrc';
+      return process.env['HOME'] + '/.gmplayerrc';
     break;
     case 'music':
-      return prefix + process.env['USER'] + '/Music/';
+      return process.env['HOME'] + '/Music/';
     break;
   }
 }
