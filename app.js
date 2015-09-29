@@ -64,9 +64,15 @@ function search (query, resultsFilter) {
     playmusic.search(query, 20, function (err, results) {
       if (err) {
         cli.error(err);
-        deferred.reject(err);
+        cli.spinner('', true);
+        return deferred.reject(err);
       }
 
+      if (!results.entries) {
+        cli.spinner('', true);
+        cli.error('No songs/albums were found with your query, please try again!');
+        return deferred.reject(err);
+      }
       return deferred.resolve(results.entries.filter(resultsFilter));
     });
   });
