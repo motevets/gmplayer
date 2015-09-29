@@ -15,6 +15,16 @@ var resultTypes = {
   album: '3'
 };
 
+var filters = {
+  onlyAlbums: function (entry) {
+    return entry.type === resultTypes.album;
+  },
+
+  onlyTracks: function (entry) {
+    return entry.type === resultTypes.track;
+  }
+};
+
 cli.parse({
   song: ['s', 'The song you want to download/play.'],
   album: ['a', 'The album you want to download/play.'],
@@ -37,59 +47,60 @@ cli.main(function (args, options) {
   // }
 });
 
-function lookup (query) {
-  cli.spinner('Looking up requested song');
+function search (query, resultsFilter) {
+  var deferred = Q.defer();
+
   playmusic.init({email: settings().email, password: settings().password}, function (err) {
     if (err) {
       console.warn(err);
+      deferred.reject(err);
       return;
     }
 
     playmusic.search(query, 20, function (err, results) {
-      if (err) cli.error(err);
-      process.stdout.write('\n');
-      results.entries.forEach(function (entry, index) {
-        if ('track' in entry) {
-          console.log(chalk.yellow('[') + index + chalk.yellow('] ') + chalk.white(entry.track.title) + ' - ' + chalk.grey(entry.track.artist));
-        }
-      });
+      if (err) {
+        cli.error(err);
+        deferred.reject(err);
+      }
 
-      var input = readline.questionInt('What song do you want to play? #');
-      cli.spinner('', true);
-
-      download(results.entries[input].track).then(play);
+      return deferred.resolve(results.entries.filter(resultsFilter));
     });
+  });
+
+  return deferred.promise;
+}
+
+function lookup (query) {
+  cli.spinner('Looking up requested song');
+
+  search(query, filters.onlyTracks).then(function (results) {
+    process.stdout.write('\n');
+
+    results.forEach(function (entry, index) {
+      console.log(chalk.yellow('[') + index + chalk.yellow('] ') + chalk.white(entry.track.title) + ' - ' + chalk.grey(entry.track.artist));
+    });
+
+    var input = readline.questionInt('What song do you want to play? #');
+    cli.spinner('', true);
+
+    download(results[input].track).then(play);
   });
 }
 
 function lookupAlbum (query) {
   cli.spinner('Looking up requested album');
-  playmusic.init({email: settings().email, password: settings().password}, function (err) {
-    if (err) {
-      console.warn(err);
-      return;
-    }
 
-    playmusic.search(query, 20, function (err, results) {;
-      if (err) cli.error(err);
+  search(query, filters.onlyAlbums).then(function (results) {
+    process.stdout.write('\n');
 
-      process.stdout.write('\n');
-
-      function onlyAlbums (entry) {
-        return entry.type === resultTypes.album;
-      }
-
-      var albumResults = results.entries.filter(onlyAlbums);
-
-      albumResults.forEach(function (entry, index) {
-        console.log(chalk.yellow('[') + index + chalk.yellow('] ') + chalk.white(entry.album.name) + ' - ' + chalk.grey(entry.album.artist));
-      });
-
-      var input = readline.questionInt('What album do you want to play? #');
-      cli.spinner('', true);
-
-      downloadAlbum(albumResults[input].album).then(playAlbum);
+    results.forEach(function (entry, index) {
+      console.log(chalk.yellow('[') + index + chalk.yellow('] ') + chalk.white(entry.album.name) + ' - ' + chalk.grey(entry.album.artist));
     });
+
+    var input = readline.questionInt('What album do you want to play? #');
+    cli.spinner('', true);
+
+    downloadAlbum(results[input].album).then(playAlbum);
   });
 }
 
