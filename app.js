@@ -227,7 +227,7 @@ function downloadAlbum (album) {
       deferred.reject(err);
     }
 
-    cli.spinner('Downloading ' + album.name);
+    cli.spinner('Downloading ' + fullAlbumDetails.artist + ' - ' + fullAlbumDetails.name);
 
     var downloadPromises = fullAlbumDetails.tracks.map(function (track) {
       var songName = track.title + ' - ' + track.artist + '.mp3';
