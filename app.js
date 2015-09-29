@@ -221,7 +221,7 @@ function downloadAlbum (album) {
       deferred.reject(err);
     }
 
-    cli.spinner('', true);
+    cli.spinner('Downloading ' + album.name);
 
     var downloadPromises = fullAlbumDetails.tracks.map(function (track) {
       var songName = track.title + ' - ' + track.artist + '.mp3';
@@ -230,6 +230,7 @@ function downloadAlbum (album) {
     });
 
     Q.all(downloadPromises).then(function () {
+      cli.spinner('', true);
       return writePlaylist(m3uWriter, album);
     }).then(deferred.resolve);
   });
