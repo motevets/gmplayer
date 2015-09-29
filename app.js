@@ -36,11 +36,15 @@ cli.main(function (args, options) {
   settings();
 
   if (options.song) {
-    lookup(args.join(' '));
+    lookup(args.join(' '))
+      .then(download)
+      .then(play);
   }
 
   if (options.album) {
-    lookupAlbum(args.join(' '));
+    lookupAlbum(args.join(' '))
+      .then(downloadAlbum)
+      .then(playAlbum);
   }
   // else if (options.offline) {
   //   offline();
@@ -71,6 +75,8 @@ function search (query, resultsFilter) {
 }
 
 function lookup (query) {
+  var deferred = Q.defer();
+
   cli.spinner('Looking up requested song');
 
   search(query, filters.onlyTracks).then(function (results) {
@@ -83,11 +89,15 @@ function lookup (query) {
     var input = readline.questionInt('What song do you want to play? #');
     cli.spinner('', true);
 
-    download(results[input].track).then(play);
+    deferred.resolve(results[input].track);
   });
+
+  return deferred.promise;
 }
 
 function lookupAlbum (query) {
+  var deferred = Q.defer();
+
   cli.spinner('Looking up requested album');
 
   search(query, filters.onlyAlbums).then(function (results) {
@@ -100,8 +110,10 @@ function lookupAlbum (query) {
     var input = readline.questionInt('What album do you want to play? #');
     cli.spinner('', true);
 
-    downloadAlbum(results[input].album).then(playAlbum);
+    deferred.resolve(results[input].album);
   });
+
+  return deferred.promise;
 }
 
 function settings() {
