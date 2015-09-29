@@ -14,6 +14,7 @@ Usage:
 
 Options:
   -s, --song             The song you want to download/play.
+  -a, --album            The album you want to download/play.
   -d, --downloadonly     If you only want to download the song instead of
                          playing it
   -h, --help             Display help and usage details
