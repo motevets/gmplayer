@@ -128,7 +128,10 @@ function settings() {
   if (!fs.existsSync(getLocation('settings'))) {
     var settings = {
       'email': 'add_your_email_here',
-      'password': 'add_your_password_here'
+      'password': 'add_your_password_here',
+      'tracknaming': '{title} - {artist}',
+      'albumnaming': '{album}',
+      'playlistnaming': '{name} - {albumArtist}'
     };
 
     fs.writeFileSync(getLocation('settings'), JSON.stringify(settings));
@@ -251,9 +254,15 @@ function downloadAlbum (album) {
 }
 
 function writePlaylist (writer, album) {
+  /* FIXME
+    This is a temp fix for a custonNaming function issue,
+    the getAlbumDirectory is also called during the downloading of tracks
+    but the within this context the supplied object is different (album instead of track)
+  */
+  album.album = album.name;
   var playlistPath = path.join(
     getAlbumDirectory(album),
-    sanitizeFilename(album.artist + ' - ' + album.name + '.m3u')
+    customNaming(settings().playlistnaming, album) + '.m3u'
   );
 
   fs.writeFileSync(playlistPath, writer.toString());
@@ -273,22 +282,20 @@ function getLocation(type) {
 }
 
 function getTrackFilename (track) {
-  return sanitizeFilename(track.title + '.mp3');
+  return customNaming(settings().tracknaming, track) + '.mp3';
 }
 
 function getAlbumDirectory (album) {
   return path.join(
     getLocation('music'),
-    sanitizeFilename(album.artist),
-    sanitizeFilename(album.name)
+    customNaming(settings().albumnaming, album)
   );
 }
 
 function getTrackDirectory (track) {
   return path.join(
     getLocation('music'),
-    sanitizeFilename(track.artist),
-    sanitizeFilename(track.album)
+    customNaming(settings().albumnaming, track)
   );
 }
 
@@ -299,6 +306,11 @@ function getTrackPath (track) {
   );
 }
 
-function sanitizeFilename (filename) {
-  return filename.replace(/\//g, '|');
+function customNaming(string, info) {
+  for (meta in info) {
+    if (info.hasOwnProperty(meta)) {
+      string = string.replace(new RegExp('{' + meta + '}', 'g'), info[meta]);
+    }
+  }
+  return string.replace(/\/|\\/g, '|');
 }
