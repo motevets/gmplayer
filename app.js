@@ -306,11 +306,20 @@ function getTrackPath (track) {
   );
 }
 
-function customNaming(string, info) {
-  for (meta in info) {
+function sanitize (filename) {
+  if (typeof filename !== 'string') { return; }
+
+  return filename.replace(/\/|\\/g, '|');
+}
+
+function customNaming (string, info) {
+  string = string.slice(); // duplicate string to avoid mutation issues
+
+  for (var meta in info) {
     if (info.hasOwnProperty(meta)) {
-      string = string.replace(new RegExp('{' + meta + '}', 'g'), info[meta]);
+      string = string.replace(new RegExp('{' + meta + '}', 'g'), sanitize(info[meta]));
     }
   }
-  return string.replace(/\/|\\/g, '|');
+
+  return string;
 }
