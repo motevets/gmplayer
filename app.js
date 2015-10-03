@@ -134,7 +134,7 @@ function settings() {
       'playlistnaming': '{name} - {albumArtist}'
     };
 
-    fs.writeFileSync(getLocation('settings'), JSON.stringify(settings));
+    fs.writeFileSync(getLocation('settings'), JSON.stringify(settings, null, 2));
     cli.fatal('Go to ~/.gmplayerrc and add your email and password');
   }
   else {
