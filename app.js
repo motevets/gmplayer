@@ -9,6 +9,8 @@ var mplayer = require('child_process').spawn;
 var os = require('os');
 var m3uWriter = require('m3u').extendedWriter();
 var Q = require('q');
+var mkdirp = require('mkdirp');
+var path = require('path');
 
 var resultTypes = {
   track: '1',
@@ -126,10 +128,13 @@ function settings() {
   if (!fs.existsSync(getLocation('settings'))) {
     var settings = {
       'email': 'add_your_email_here',
-      'password': 'add_your_password_here'
+      'password': 'add_your_password_here',
+      'tracknaming': '{title} - {artist}',
+      'albumnaming': '{album}',
+      'playlistnaming': '{name} - {albumArtist}'
     };
 
-    fs.writeFileSync(getLocation('settings'), JSON.stringify(settings));
+    fs.writeFileSync(getLocation('settings'), JSON.stringify(settings, null, 2));
     cli.fatal('Go to ~/.gmplayerrc and add your email and password');
   }
   else {
@@ -148,10 +153,10 @@ function mplayerArgs (filename, isPlaylist) {
   var audioEngine = audioEngines[os.platform()];
 
   if (isPlaylist) {
-    return ['-ao', audioEngine, '-playlist', getLocation('music') + filename];
+    return ['-ao', audioEngine, '-playlist', filename];
   }
 
-  return ['-ao', audioEngine, getLocation('music') + filename];
+  return ['-ao', audioEngine, filename];
 }
 
 function playAlbum (playlistFile) {
@@ -164,7 +169,7 @@ function play(file, playlist) {
   var player = mplayer('mplayer', mplayerArgs(file, playlist));
   var isfiltered = false;
 
-  console.log('Playing ' + file + '\n');
+  console.log('Playing ' + path.basename(file) + '\n');
 
   player.stdout.on('data', function (data) {
     if (data.toString().substr(0,2) == 'A:' && !isfiltered) {
@@ -184,11 +189,12 @@ function play(file, playlist) {
 
 function download (track) {
   var deferred = Q.defer();
-  var songname = track.title + ' - ' + track.artist + '.mp3';
+  var songPath = getTrackPath(track);
+  var songDirectory = getTrackDirectory(track);
 
-  if (fs.existsSync(getLocation('music') + songname)) {
+  if (fs.existsSync(songPath)) {
     console.log('Song already found in offline storage, playing that instead.');
-    deferred.resolve(songname);
+    deferred.resolve(songPath);
 
     return deferred.promise;
   }
@@ -200,19 +206,23 @@ function download (track) {
       return;
     }
 
-    http.get(url, function (res) {
-      res.on('data', function (data) {
-        if (!fs.existsSync(getLocation('music') + songname)) {
-          fs.writeFileSync(getLocation('music') + songname, data);
-        } else {
-          fs.appendFileSync(getLocation('music') + songname, data);
-        }
-      });
+    mkdirp(songDirectory, function (err) {
+      if (err) cli.error(err);
 
-      res.on('end', function () {
-        deferred.resolve(songname);
+      http.get(url, function (res) {
+        res.on('data', function (data) {
+          if (!fs.existsSync(songPath)) {
+            fs.writeFileSync(songPath, data);
+          } else {
+            fs.appendFileSync(songPath, data);
+          }
+        });
+
+        res.on('end', function () {
+          deferred.resolve(songPath);
+        });
       });
-    });
+    })
   });
 
   return deferred.promise;
@@ -230,8 +240,8 @@ function downloadAlbum (album) {
     cli.spinner('Downloading ' + fullAlbumDetails.artist + ' - ' + fullAlbumDetails.name);
 
     var downloadPromises = fullAlbumDetails.tracks.map(function (track) {
-      var songName = track.title + ' - ' + track.artist + '.mp3';
-      m3uWriter.file(getLocation('music') + songName);
+      track.albumArtist = fullAlbumDetails.albumArtist;
+      m3uWriter.file(getTrackFilename(track));
       return download(track);
     });
 
@@ -245,20 +255,72 @@ function downloadAlbum (album) {
 }
 
 function writePlaylist (writer, album) {
-  var playlistPath = getLocation('music') + album.name + '.m3u';
+  /* FIXME
+    This is a temp fix for a custonNaming function issue,
+    the getAlbumDirectory is also called during the downloading of tracks
+    but the within this context the supplied object is different (album instead of track)
+  */
+  album.album = album.name;
+  var playlistPath = path.join(
+    getAlbumDirectory(album),
+    customNaming(settings().playlistnaming, album) + '.m3u'
+  );
 
   fs.writeFileSync(playlistPath, writer.toString());
 
-  return album.name + '.m3u';
+  return playlistPath;
 }
 
 function getLocation(type) {
   switch (type) {
     case 'settings':
       return process.env['HOME'] + '/.gmplayerrc';
-    break;
+      break;
     case 'music':
-      return process.env['HOME'] + '/Music/';
-    break;
+      return process.env['HOME'] + '/Music/gmplayer';
+      break;
   }
+}
+
+function getTrackFilename (track) {
+  return customNaming(settings().tracknaming, track) + '.mp3';
+}
+
+function getAlbumDirectory (album) {
+  return path.join(
+    getLocation('music'),
+    customNaming(settings().albumnaming, album)
+  );
+}
+
+function getTrackDirectory (track) {
+  return path.join(
+    getLocation('music'),
+    customNaming(settings().albumnaming, track)
+  );
+}
+
+function getTrackPath (track) {
+  return path.join(
+    getTrackDirectory(track),
+    getTrackFilename(track)
+  );
+}
+
+function sanitize (filename) {
+  if (typeof filename !== 'string') { return; }
+
+  return filename.replace(/\/|\\/g, '|');
+}
+
+function customNaming (string, info) {
+  string = string.slice(); // duplicate string to avoid mutation issues
+
+  for (var meta in info) {
+    if (info.hasOwnProperty(meta)) {
+      string = string.replace(new RegExp('{' + meta + '}', 'g'), sanitize(info[meta]));
+    }
+  }
+
+  return string;
 }
