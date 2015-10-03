@@ -240,6 +240,7 @@ function downloadAlbum (album) {
     cli.spinner('Downloading ' + fullAlbumDetails.artist + ' - ' + fullAlbumDetails.name);
 
     var downloadPromises = fullAlbumDetails.tracks.map(function (track) {
+      track.albumArtist = fullAlbumDetails.albumArtist;
       m3uWriter.file(getTrackFilename(track));
       return download(track);
     });
