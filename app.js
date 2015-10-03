@@ -274,10 +274,10 @@ function getLocation(type) {
   switch (type) {
     case 'settings':
       return process.env['HOME'] + '/.gmplayerrc';
-    break;
+      break;
     case 'music':
       return process.env['HOME'] + '/Music/gmplayer';
-    break;
+      break;
   }
 }
 
