@@ -186,6 +186,10 @@ function play(file, playlist) {
   player.on('error', function (data) {
     cli.fatal('There was an error playing your song, maybe you need to install mplayer?');
   });
+
+  player.on('exit', function () {
+    process.exit();
+  });
 }
 
 function download (track) {
