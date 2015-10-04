@@ -58,15 +58,16 @@ function search (query, resultsFilter) {
 
   playmusic.init({email: settings().email, password: settings().password}, function (err) {
     if (err) {
-      console.warn(err);
+      cli.spinner('', true);
+      cli.error(err);
       deferred.reject(err);
       return;
     }
 
     playmusic.search(query, 20, function (err, results) {
       if (err) {
-        cli.error(err);
         cli.spinner('', true);
+        cli.error(err);
         return deferred.reject(err);
       }
 
