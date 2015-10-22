@@ -36,6 +36,7 @@ cli.parse({
 
 cli.main(function (args, options) {
   settings();
+  cli.options = options;
 
   if (options.song) {
     lookup(args.join(' '))
@@ -215,12 +216,17 @@ function download (track) {
       if (err) cli.error(err);
 
       http.get(url, function (res) {
+        var size = parseInt(res.headers['content-length']);
+        if (cli.options.song) console.log('Downloading ' + customNaming(settings().tracknaming, track));
+
         res.on('data', function (data) {
           if (!fs.existsSync(songPath)) {
             fs.writeFileSync(songPath, data);
           } else {
             fs.appendFileSync(songPath, data);
           }
+          var fileSize = fs.statSync(songPath).size;
+          if (cli.options.song) cli.progress(fileSize / size);
         });
 
         res.on('end', function () {
