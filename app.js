@@ -28,9 +28,9 @@ var filters = {
 };
 
 cli.parse({
-  song: ['s', 'The song you want to download/play.'],
-  album: ['a', 'The album you want to download/play.'],
-  downloadonly: ['d', 'If you only want to download the song instead of playing it'],
+  song: ['s', 'The song you want to download/play.', 'string'],
+  album: ['a', 'The album you want to download/play.', 'string'],
+  downloadonly: ['d', 'If you only want to download the song instead of playing it (In combination with either -s or -a)'],
   // offline: ['o', 'If you want to listen to already downloaded songs']
 });
 
@@ -39,13 +39,13 @@ cli.main(function (args, options) {
   cli.options = options;
 
   if (options.song) {
-    lookup(args.join(' '))
+    lookup(options.song)
       .then(download)
       .then(play);
   }
 
   if (options.album) {
-    lookupAlbum(args.join(' '))
+    lookupAlbum(options.album)
       .then(downloadAlbum)
       .then(playAlbum);
   }
@@ -230,6 +230,7 @@ function download (track) {
         });
 
         res.on('end', function () {
+          if (cli.options.song && cli.options.downloadonly) process.exit();
           deferred.resolve(songPath);
         });
       });
@@ -258,7 +259,9 @@ function downloadAlbum (album) {
 
     Q.all(downloadPromises).then(function () {
       cli.spinner('', true);
-      return writePlaylist(m3uWriter, album);
+      writePlaylist(m3uWriter, album);
+      if (cli.options.downloadonly) process.exit();
+      return;
     }).then(deferred.resolve);
   });
 
