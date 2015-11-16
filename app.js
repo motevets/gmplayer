@@ -170,7 +170,6 @@ function play(file, playlist) {
 
   var player = mplayer('mplayer', mplayerArgs(file, playlist));
   var isfiltered = false;
-
   console.log('Playing ' + path.basename(file) + '\n');
 
   player.stdout.on('data', function (data) {
@@ -217,6 +216,8 @@ function download (track) {
 
       http.get(url, function (res) {
         var size = parseInt(res.headers['content-length']);
+       // console.log('track', track);
+       // console.log('Suggested name', customNaming(settings().tracknaming, track));
         if (cli.options.song) console.log('Downloading ' + customNaming(settings().tracknaming, track));
 
         res.on('data', function (data) {
@@ -259,9 +260,11 @@ function downloadAlbum (album) {
 
     Q.all(downloadPromises).then(function () {
       cli.spinner('', true);
-      writePlaylist(m3uWriter, album);
-      if (cli.options.downloadonly) process.exit();
-      return;
+      if (cli.options.downloadonly) {
+        writePlaylist(m3uWriter, album);
+        process.exit();
+      }
+      return writePlaylist(m3uWriter, album);
     }).then(deferred.resolve);
   });
 
