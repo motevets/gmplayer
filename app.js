@@ -226,6 +226,7 @@ function download (track) {
 
         res.on('end', function () {
           if (cli.options.song && cli.options.downloadonly) process.exit();
+          if (cli.options.album) cli.progress(++cli.album.size/ cli.album.total);
           deferred.resolve(songPath);
         });
       });
@@ -244,7 +245,14 @@ function downloadAlbum (album) {
       deferred.reject(err);
     }
 
-    cli.spinner('Downloading ' + fullAlbumDetails.artist + ' - ' + fullAlbumDetails.name);
+    console.log('Downloading ' + fullAlbumDetails.artist + ' - ' + fullAlbumDetails.name);
+    cli.album = {
+      'total': fullAlbumDetails.tracks.length,
+      'size': 0
+    };
+
+    cli.progress(0 / cli.album.total);
+
 
     var downloadPromises = fullAlbumDetails.tracks.map(function (track) {
       track.albumArtist = fullAlbumDetails.albumArtist;
