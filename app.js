@@ -31,7 +31,6 @@ cli.parse({
   song: ['s', 'The song you want to download/play.', 'string'],
   album: ['a', 'The album you want to download/play.', 'string'],
   downloadonly: ['d', 'If you only want to download the song instead of playing it (In combination with either -s or -a)'],
-  // offline: ['o', 'If you want to listen to already downloaded songs']
 });
 
 cli.main(function (args, options) {
@@ -49,9 +48,6 @@ cli.main(function (args, options) {
       .then(downloadAlbum)
       .then(playAlbum);
   }
-  // else if (options.offline) {
-  //   offline();
-  // }
 });
 
 function search (query, resultsFilter) {
@@ -216,8 +212,6 @@ function download (track) {
 
       http.get(url, function (res) {
         var size = parseInt(res.headers['content-length']);
-       // console.log('track', track);
-       // console.log('Suggested name', customNaming(settings().tracknaming, track));
         if (cli.options.song) console.log('Downloading ' + customNaming(settings().tracknaming, track));
 
         res.on('data', function (data) {
@@ -338,6 +332,5 @@ function customNaming (string, info) {
       string = string.replace(new RegExp('{' + meta + '}', 'g'), sanitize(info[meta]));
     }
   }
-
   return string;
 }
