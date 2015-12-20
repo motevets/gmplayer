@@ -11,6 +11,7 @@ var m3uWriter = require('m3u').extendedWriter();
 var Q = require('q');
 var mkdirp = require('mkdirp');
 var path = require('path');
+var meta = require('ffmetadata');
 
 var resultTypes = {
   track: '1',
@@ -225,9 +226,12 @@ function download (track) {
         });
 
         res.on('end', function () {
-          if (cli.options.song && cli.options.downloadonly) process.exit();
-          if (cli.options.album) cli.progress(++cli.album.size/ cli.album.total);
-          deferred.resolve(songPath);
+          metadata(songPath, track, function () {
+            if (cli.options.song && cli.options.downloadonly) process.exit();
+            if (cli.options.album) cli.progress(++cli.album.size/ cli.album.total);
+            deferred.resolve(songPath);
+          });
+
         });
       });
     })
@@ -341,4 +345,18 @@ function customNaming (string, info) {
     }
   }
   return string;
+}
+
+function metadata(path, data, cb) {
+  var data = {
+    artist: data.artist,
+    album: data.album,
+    track: data.trackNumber,
+    title: data.title
+  };
+
+  meta.write(path, data, function (err) {
+    if (err) console.warn(err);
+    cb();
+  });
 }
