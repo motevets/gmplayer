@@ -20,17 +20,18 @@ var resultTypes = {
 
 var filters = {
   onlyAlbums: function (entry) {
-    return entry.type === resultTypes.album;
+    return entry.type === resultTypes.album || entry.contentType == resultTypes.album;
   },
 
   onlyTracks: function (entry) {
-    return entry.type === resultTypes.track;
+    return entry.type === resultTypes.track || entry.contentType == resultTypes.track;
   }
 };
 
 cli.parse({
   song: ['s', 'The song you want to download/play.', 'string'],
   album: ['a', 'The album you want to download/play.', 'string'],
+  library: ['l', 'List all items from your library (In combination with either -s or -a)'],
   downloadonly: ['d', 'If you only want to download the song instead of playing it (In combination with either -s or -a)'],
 });
 
@@ -47,7 +48,6 @@ cli.main(function (args, options) {
   if (options.album) {
     lookupAlbum(options.album)
       .then(downloadAlbum)
-      .then(playAlbum);
   }
 });
 
@@ -62,20 +62,38 @@ function search (query, resultsFilter) {
       return;
     }
 
-    playmusic.search(query, 20, function (err, results) {
-      if (err) {
-        cli.spinner('', true);
-        cli.error(err);
-        return deferred.reject(err);
-      }
+    if (cli.options.library) {
+      playmusic.getAllTracks(function (err, all) {
+       var results = all.data.items.filter(function (track) {
+          var match = track.title.match(query) + track.album.match(query) + track.artist.match(query);
+          return match.length > 0;
+        });
 
-      if (!results.entries) {
-        cli.spinner('', true);
-        cli.error('No songs/albums were found with your query, please try again!');
-        return deferred.reject(err);
-      }
-      return deferred.resolve(results.entries.filter(resultsFilter));
-    });
+       if (results.length == 0) {
+         cli.spinner('', true);
+         cli.error('No songs/albums were found with your query in your library, please try again!');
+       }
+
+       return deferred.resolve(results.filter(resultsFilter));
+      });
+    }
+    else {
+      playmusic.search(query, 20, function (err, results) {
+        if (err) {
+          cli.spinner('', true);
+          cli.error(err);
+          return deferred.reject(err);
+        }
+
+        if (!results.entries) {
+          cli.spinner('', true);
+          cli.error('No songs/albums were found with your query, please try again!');
+          return deferred.reject(err);
+        }
+        return deferred.resolve(results.entries.filter(resultsFilter));
+      });
+    }
+
   });
 
   return deferred.promise;
@@ -89,9 +107,16 @@ function lookup (query) {
   search(query, filters.onlyTracks).then(function (results) {
     process.stdout.write('\n');
 
-    results.forEach(function (entry, index) {
-      console.log(chalk.yellow('[') + index + chalk.yellow('] ') + chalk.white(entry.track.title) + ' - ' + chalk.grey(entry.track.artist));
-    });
+    if (results[0].type) {
+      results.forEach(function (entry, index) {
+        console.log(chalk.yellow('[') + index + chalk.yellow('] ') + chalk.white(entry.track.title) + ' - ' + chalk.grey(entry.track.artist));
+      });
+    }
+    else {
+      results.forEach(function (entry, index) {
+        console.log(chalk.yellow('[') + index + chalk.yellow('] ') + chalk.white(entry.title) + ' - ' + chalk.grey(entry.artist));
+      });
+    }
 
     var input = readline.questionInt('What song do you want to play? #');
     cli.spinner('', true);
