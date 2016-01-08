@@ -153,6 +153,7 @@ function settings() {
     var settings = {
       'email': 'add_your_email_here',
       'password': 'add_your_password_here',
+      'musicdirectory': process.env["HOME"] + '/Music/gmplayer',
       'tracknaming': '{title} - {artist}',
       'albumnaming': '{album}',
       'playlistnaming': '{name} - {albumArtist}'
@@ -325,7 +326,7 @@ function getLocation(type) {
       return process.env['HOME'] + '/.gmplayerrc';
       break;
     case 'music':
-      return process.env['HOME'] + '/Music/gmplayer';
+      return settings().musicdirectory;
       break;
   }
 }
