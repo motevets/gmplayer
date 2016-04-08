@@ -48,6 +48,7 @@ cli.main(function (args, options) {
   if (options.album) {
     lookupAlbum(options.album)
       .then(downloadAlbum)
+      .then(playAlbum)
   }
 });
 
