@@ -9,6 +9,10 @@ God, it's almost becoming my main thing. Making CLI based web streaming music pl
 npm install gmplayer -g
 ```
 
+### System Requirements
+* [ffmpeg]: processing track meta-data
+* [mplayer]: playing music
+
 ## Usage :
 ```
 Usage:
@@ -25,3 +29,6 @@ Options:
 
 ## LICENSE
 Check out the `LICENSE` file for more information.
+
+[ffmpeg]: https://ffmpeg.org/
+[mplayer]: https://mplayerhq.hu/
