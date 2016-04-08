@@ -45,9 +45,13 @@ cli.main(function (args, options) {
       .then(play);
   }
 
-  if (options.album) {
+  else if (options.album) {
     lookupAlbum(options.album)
       .then(downloadAlbum)
+  }
+
+  else {
+    cli.getUsage();
   }
 });
 
