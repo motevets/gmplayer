@@ -273,6 +273,7 @@ function download (track) {
 
 function downloadAlbum (album) {
   var deferred = Q.defer();
+  var lastDownload = Q('dummy');
 
   playmusic.getAlbum(album.albumId, true, function (err, fullAlbumDetails) {
     if (err) {
@@ -288,14 +289,16 @@ function downloadAlbum (album) {
 
     cli.progress(0 / cli.album.total);
 
-
-    var downloadPromises = fullAlbumDetails.tracks.map(function (track) {
+    fullAlbumDetails.tracks.forEach(function (track) {
       track.albumArtist = fullAlbumDetails.albumArtist;
       m3uWriter.file(getTrackFilename(track));
-      return download(track);
+      console.log('adding download promise to chain');
+      lastDownload = lastDownload.then(function(value) {
+        return download(track);
+      });
     });
 
-    Q.all(downloadPromises).then(function () {
+    lastDownload.then(function () {
       cli.spinner('', true);
       if (cli.options.downloadonly) {
         writePlaylist(m3uWriter, album);
